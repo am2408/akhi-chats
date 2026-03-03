@@ -12,8 +12,6 @@ model User {
   messages      Message[]
   channels      ChannelMember[]
   notifications Notification[]
-  friendsSent     Friendship[] @relation("FriendRequester")
-  friendsReceived Friendship[] @relation("FriendReceiver")
   ownedServers  Server[]       @relation("ServerOwner")
 
   friends       Friendship[]    @relation("UserFriends")
