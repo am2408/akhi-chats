@@ -1,0 +1,54 @@
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  channels  Channel[] @relation("UserChannels")
+  servers   Server[]  @relation("UserServers")
+  messages  Message[]
+  notifications Notification[]
+}
+
+model Channel {
+  id        String   @id @default(cuid())
+  name      String
+  serverId  String
+  messages  Message[]
+  users     User[]   @relation("UserChannels")
+  server    Server   @relation(fields: [serverId], references: [id])
+}
+
+model Server {
+  id        String   @id @default(cuid())
+  name      String
+  channels  Channel[]
+  users     User[]   @relation("UserServers")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  senderId  String
+  channelId String
+  createdAt DateTime @default(now())
+  sender    User     @relation(fields: [senderId], references: [id])
+  channel   Channel  @relation(fields: [channelId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}

@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: #5865f2;
+  --color-primary-hover: #4752c4;
+  --color-secondary: #2b2d31;
+  --color-accent: #404249;
+  --color-success: #23a55a;
+  --color-danger: #da373c;
+  --color-warning: #f0b232;
+  --color-muted: #949ba4;
+  --color-sidebar: #f2f3f5;
+  --color-chat-bg: #ffffff;
+  --color-input-bg: #e3e5e8;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --primary-color: #7289da;
+  --secondary-color: #99aab5;
+  --background-color: #36393f;
+  --text-color: #ffffff;
+  --link-color: #1f8bff;
+  --border-color: #2c2f33;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  background-color: var(--primary-color);
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.footer {
+  background-color: var(--primary-color);
+  padding: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.button {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: var(--secondary-color);
+}
+
+.input {
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 10px;
+  width: 100%;
+  background-color: #2f3136;
+  color: var(--text-color);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.modal {
+  background-color: #40444b;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.notification {
+  background-color: #7289da;
+  color: var(--text-color);
+  padding: 10px;
+  border-radius: 5px;
+  margin: 5px 0;
+}
