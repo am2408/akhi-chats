@@ -1,17 +1,10 @@
-import React from 'react';
+"use client";
 
-const FriendsPage = () => {
-    return (
-        <div className="friends-page">
-            <h1 className="text-2xl font-bold">Friends List</h1>
-            <ul className="friends-list">
-                {/* Placeholder for friends list items */}
-                <li className="friend-item">Friend 1</li>
-                <li className="friend-item">Friend 2</li>
-                <li className="friend-item">Friend 3</li>
-            </ul>
-        </div>
-    );
-};
-
-export default FriendsPage;
+export default function FriendsPage() {
+  return (
+    <div style={{ padding: "24px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "16px" }}>Friends</h1>
+      <p style={{ color: "#5c5e66" }}>Your friends list will appear here.</p>
+    </div>
+  );
+}

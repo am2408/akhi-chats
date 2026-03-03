@@ -1,27 +1,13 @@
-import React from 'react';
-import { useAuth } from '../../hooks/use-auth';
-import Avatar from '../ui/avatar';
-import Button from '../ui/button';
+"use client";
 
-const UserPanel: React.FC = () => {
-    const { user, logout } = useAuth();
+import React from "react";
 
-    return (
-        <div className="flex items-center p-4 bg-gray-800 text-white">
-            {user && (
-                <>
-                    <Avatar src={user.avatarUrl} alt={user.name} />
-                    <div className="ml-3">
-                        <h2 className="text-lg font-semibold">{user.name}</h2>
-                        <p className="text-sm">{user.email}</p>
-                    </div>
-                    <Button onClick={logout} className="ml-auto">
-                        Logout
-                    </Button>
-                </>
-            )}
-        </div>
-    );
-};
+export default function UserPanel() {
+  return (
+    <div style={{ padding: "12px", borderTop: "1px solid #e1e2e4" }}>
+      <span style={{ fontSize: "14px", color: "#4e5058" }}>User</span>
+    </div>
+  );
+}
 
-export default UserPanel;
+export { UserPanel };

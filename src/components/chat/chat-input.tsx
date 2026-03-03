@@ -1,28 +1,30 @@
-import React, { useState } from 'react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
+"use client";
 
-const ChatInput: React.FC<{ onSendMessage: (message: string) => void }> = ({ onSendMessage }) => {
-    const [message, setMessage] = useState('');
+import React, { useState } from "react";
 
-    const handleSend = () => {
-        if (message.trim()) {
-            onSendMessage(message);
-            setMessage('');
-        }
-    };
+export default function ChatInput({ onSendMessage }: { onSendMessage: (message: string) => void }) {
+  const [message, setMessage] = useState("");
 
-    return (
-        <div className="flex items-center p-4 border-t border-gray-200">
-            <Input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-grow mr-2"
-            />
-            <Button onClick={handleSend}>Send</Button>
-        </div>
-    );
-};
+  const handleSend = () => {
+    if (!message.trim()) return;
+    onSendMessage(message);
+    setMessage("");
+  };
 
-export default ChatInput;
+  return (
+    <div style={{ padding: "0 16px 24px" }}>
+      <div style={{ display: "flex", background: "#ebedef", borderRadius: "8px", padding: "0 16px" }}>
+        <input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type a message..."
+          style={{ flex: 1, padding: "12px 0", background: "transparent", border: "none", outline: "none", fontSize: "16px" }}
+        />
+        <button onClick={handleSend} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px" }}>
+          ➤
+        </button>
+      </div>
+    </div>
+  );
+}

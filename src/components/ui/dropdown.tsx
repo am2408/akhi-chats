@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+"use client";
+
+import React, { useState } from "react";
 
 interface DropdownProps {
   options: string[];
@@ -23,7 +25,7 @@ const Dropdown: React.FC<DropdownProps> = ({ options, onSelect, placeholder }) =
   return (
     <div className="relative">
       <button onClick={toggleDropdown} className="border p-2 rounded">
-        {selectedOption || placeholder || 'Select an option'}
+        {selectedOption || placeholder || "Select an option"}
       </button>
       {isOpen && (
         <ul className="absolute bg-white border rounded shadow mt-1">

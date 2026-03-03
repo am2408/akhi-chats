@@ -1,17 +1,7 @@
-import React from 'react';
-import { useChatSocket } from '../../hooks/use-chat-socket';
-import ChatItem from './chat-item';
+"use client";
 
-const ChatMessages = () => {
-    const { messages } = useChatSocket();
+import React from "react";
 
-    return (
-        <div className="chat-messages overflow-y-auto">
-            {messages.map((message) => (
-                <ChatItem key={message.id} message={message} />
-            ))}
-        </div>
-    );
-};
-
-export default ChatMessages;
+export default function ChatMessages() {
+  return <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>No messages yet.</div>;
+}

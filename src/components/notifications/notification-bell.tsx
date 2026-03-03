@@ -1,24 +1,13 @@
-import React from 'react';
-import { useNotifications } from '../../hooks/use-notifications';
-import { BellIcon } from '@heroicons/react/outline';
+"use client";
 
-const NotificationBell: React.FC = () => {
-    const { notifications, markAsRead } = useNotifications();
+import React from "react";
 
-    const handleBellClick = () => {
-        markAsRead();
-    };
+export default function NotificationBell() {
+  return (
+    <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", position: "relative" }}>
+      🔔
+    </button>
+  );
+}
 
-    return (
-        <div className="relative">
-            <button onClick={handleBellClick} className="p-2 rounded-full hover:bg-gray-200">
-                <BellIcon className="h-6 w-6 text-gray-700" />
-                {notifications.length > 0 && (
-                    <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500" />
-                )}
-            </button>
-        </div>
-    );
-};
-
-export default NotificationBell;
+export { NotificationBell };

@@ -1,29 +1,44 @@
-import React from 'react';
+"use client";
+
+import React from "react";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  title: string;
   children: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        {title && <h2 className="text-lg font-semibold mb-4">{title}</h2>}
-        <div>{children}</div>
-        <button
-          className="mt-4 bg-blue-500 text-white py-2 px-4 rounded"
-          onClick={onClose}
-        >
-          Close
-        </button>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "24px",
+          width: "100%",
+          maxWidth: "440px",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        }}
+      >
+        <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>{title}</h2>
+        {children}
       </div>
     </div>
   );
-};
-
-export default Modal;
+}

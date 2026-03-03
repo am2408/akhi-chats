@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
+import { NextResponse } from "next/server";
 
 const options = {
   providers: [
@@ -35,3 +36,11 @@ const options = {
 };
 
 export default (req, res) => NextAuth(req, res, options);
+
+export async function GET() {
+  return NextResponse.json({ message: "Auth endpoint" });
+}
+
+export async function POST() {
+  return NextResponse.json({ message: "Auth endpoint" });
+}

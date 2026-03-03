@@ -1,25 +1,31 @@
-import { useState } from 'react';
+"use client";
 
-const useModal = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [modalContent, setModalContent] = useState(null);
+import { useEffect, useState } from "react";
 
-    const openModal = (content) => {
-        setModalContent(content);
-        setIsOpen(true);
-    };
+interface Notification {
+  id: string;
+  type: string;
+  content: string;
+  read: boolean;
+}
 
-    const closeModal = () => {
-        setIsOpen(false);
-        setModalContent(null);
-    };
+const useNotifications = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-    return {
-        isOpen,
-        modalContent,
-        openModal,
-        closeModal,
-    };
+  useEffect(() => {
+    fetch("/api/notifications")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.notifications) setNotifications(data.notifications);
+      })
+      .catch(console.error);
+  }, []);
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  return { notifications, markAsRead };
 };
 
-export default useModal;
+export default useNotifications;

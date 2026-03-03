@@ -1,30 +1,10 @@
-import React from 'react';
+"use client";
 
-const SettingsPage = () => {
-    return (
-        <div className="settings-container">
-            <h1 className="settings-title">User Settings</h1>
-            <div className="settings-options">
-                <div className="setting-option">
-                    <label htmlFor="username">Username</label>
-                    <input type="text" id="username" placeholder="Enter your username" />
-                </div>
-                <div className="setting-option">
-                    <label htmlFor="email">Email</label>
-                    <input type="email" id="email" placeholder="Enter your email" />
-                </div>
-                <div className="setting-option">
-                    <label htmlFor="password">Password</label>
-                    <input type="password" id="password" placeholder="Change your password" />
-                </div>
-                <div className="setting-option">
-                    <label htmlFor="notifications">Notifications</label>
-                    <input type="checkbox" id="notifications" />
-                </div>
-                <button className="save-settings-button">Save Changes</button>
-            </div>
-        </div>
-    );
-};
-
-export default SettingsPage;
+export default function SettingsPage() {
+  return (
+    <div style={{ padding: "24px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "16px" }}>Settings</h1>
+      <p style={{ color: "#5c5e66" }}>Settings coming soon.</p>
+    </div>
+  );
+}

@@ -1,25 +1,67 @@
-import React from 'react';
-import { Sidebar } from '../../components/navigation/sidebar';
-import { UserPanel } from '../../components/navigation/user-panel';
-import { NotificationBell } from '../../components/notifications/notification-bell';
-import './globals.css';
+"use client";
 
-const MainLayout = ({ children }) => {
-    return (
-        <div className="flex h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col">
-                <header className="flex items-center justify-between p-4 bg-gray-800 text-white">
-                    <h1 className="text-xl">Chat Application</h1>
-                    <NotificationBell />
-                    <UserPanel />
-                </header>
-                <main className="flex-1 overflow-y-auto p-4">
-                    {children}
-                </main>
-            </div>
-        </div>
-    );
-};
+import React from "react";
 
-export default MainLayout;
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <aside
+        style={{
+          width: "72px",
+          background: "#e3e5e8",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "12px 0",
+          gap: "8px",
+          overflowY: "auto",
+        }}
+      >
+        <a
+          href="/chat"
+          style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "16px",
+            background: "#5865f2",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: "20px",
+            textDecoration: "none",
+          }}
+        >
+          A
+        </a>
+        <div style={{ width: "32px", height: "2px", background: "#c9ccd1", borderRadius: "1px" }} />
+        <a
+          href="/servers"
+          style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            background: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#23a55a",
+            fontWeight: "bold",
+            fontSize: "24px",
+            textDecoration: "none",
+            transition: "border-radius 0.2s",
+          }}
+        >
+          +
+        </a>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {children}
+      </main>
+    </div>
+  );
+}

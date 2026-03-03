@@ -1,23 +1,25 @@
-import React from 'react';
+"use client";
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
+import React from "react";
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+
+export default function Input({ style, ...props }: InputProps) {
+  return (
+    <input
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        borderRadius: "8px",
+        border: "1px solid #e1e2e4",
+        fontSize: "14px",
+        outline: "none",
+        background: "#f2f3f5",
+        ...style,
+      }}
+      {...props}
+    />
+  );
 }
 
-const Input: React.FC<InputProps> = ({ label, error, ...props }) => {
-  return (
-    <div className="flex flex-col">
-      {label && <label className="mb-1 text-sm font-medium">{label}</label>}
-      <input
-        className={`border rounded-md p-2 ${
-          error ? 'border-red-500' : 'border-gray-300'
-        } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-        {...props}
-      />
-      {error && <span className="mt-1 text-sm text-red-500">{error}</span>}
-    </div>
-  );
-};
-
-export default Input;
+export { Input };

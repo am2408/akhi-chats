@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createRoom, joinRoom, leaveRoom } from '@/lib/livekit';
+import { NextResponse } from "next/server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req;
@@ -25,4 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             res.setHeader('Allow', ['POST']);
             return res.status(405).end(`Method ${method} Not Allowed`);
     }
+}
+
+export async function GET() {
+  return NextResponse.json({ message: "LiveKit endpoint — configure later" });
+}
+
+export async function POST() {
+  return NextResponse.json({ message: "LiveKit endpoint — configure later" });
 }

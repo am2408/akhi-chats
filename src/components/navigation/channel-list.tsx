@@ -1,25 +1,7 @@
-import React from 'react';
+"use client";
 
-const ChannelList = () => {
-    const channels = [
-        { id: 1, name: 'General' },
-        { id: 2, name: 'Random' },
-        { id: 3, name: 'Development' },
-        { id: 4, name: 'Design' },
-    ];
+import React from "react";
 
-    return (
-        <div className="channel-list">
-            <h2 className="text-lg font-bold">Channels</h2>
-            <ul className="mt-2">
-                {channels.map(channel => (
-                    <li key={channel.id} className="channel-item p-2 hover:bg-gray-200 rounded">
-                        {channel.name}
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
-
-export default ChannelList;
+export default function ChannelList() {
+  return <div>Channel list</div>;
+}

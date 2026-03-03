@@ -1,40 +1,31 @@
-import React from 'react';
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import { fetchServerData } from '@/lib/api'; // Assume this function fetches server data
+"use client";
 
-const ServerPage = () => {
-    const router = useRouter();
-    const { serverId } = router.query;
-    const [serverData, setServerData] = useState(null);
-    const [loading, setLoading] = useState(true);
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 
-    useEffect(() => {
-        if (serverId) {
-            const loadData = async () => {
-                const data = await fetchServerData(serverId);
-                setServerData(data);
-                setLoading(false);
-            };
-            loadData();
-        }
-    }, [serverId]);
+export default function ServerPage() {
+  const params = useParams();
+  const serverId = params?.serverId as string;
+  const [server, setServer] = useState<{ name: string } | null>(null);
 
-    if (loading) {
-        return <div>Loading...</div>;
-    }
+  useEffect(() => {
+    if (!serverId) return;
+    fetch(`/api/servers/${serverId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.server) setServer(data.server);
+      })
+      .catch(console.error);
+  }, [serverId]);
 
-    if (!serverData) {
-        return <div>Server not found</div>;
-    }
-
-    return (
-        <div>
-            <h1>{serverData.name}</h1>
-            <p>{serverData.description}</p>
-            {/* Additional server details and components can be added here */}
-        </div>
-    );
-};
-
-export default ServerPage;
+  return (
+    <div style={{ padding: "24px" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 700 }}>
+        {server?.name || "Loading..."}
+      </h1>
+      <p style={{ color: "#5c5e66", marginTop: "8px" }}>
+        Select a channel to start chatting.
+      </p>
+    </div>
+  );
+}

@@ -1,40 +1,39 @@
-import { useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+"use client";
 
-const useChatSocket = (serverUrl: string) => {
-    const socketRef = useRef<Socket | null>(null);
+import { useEffect, useRef, useState } from "react";
 
-    useEffect(() => {
-        socketRef.current = io(serverUrl);
+interface Message {
+  id: string;
+  content: string;
+  userId: string;
+  createdAt: string;
+}
 
-        return () => {
-            socketRef.current?.disconnect();
-        };
-    }, [serverUrl]);
+const useChatSocket = (channelId: string) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const sendMessage = (channelId: string, message: string) => {
-        if (socketRef.current) {
-            socketRef.current.emit('send_message', { channelId, message });
-        }
+  useEffect(() => {
+    if (!channelId) return;
+
+    const fetchMessages = () => {
+      fetch(`/api/messages?channelId=${channelId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.messages) setMessages(data.messages);
+        })
+        .catch(console.error);
     };
 
-    const onMessageReceived = (callback: (message: any) => void) => {
-        if (socketRef.current) {
-            socketRef.current.on('receive_message', callback);
-        }
-    };
+    fetchMessages();
+    intervalRef.current = setInterval(fetchMessages, 3000);
 
-    const joinChannel = (channelId: string) => {
-        if (socketRef.current) {
-            socketRef.current.emit('join_channel', channelId);
-        }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
+  }, [channelId]);
 
-    return {
-        sendMessage,
-        onMessageReceived,
-        joinChannel,
-    };
+  return { messages, setMessages };
 };
 
 export default useChatSocket;

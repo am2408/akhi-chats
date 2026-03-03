@@ -1,17 +1,11 @@
-import React from 'react';
+"use client";
 
-interface ChatHeaderProps {
-  channelName: string;
-  onlineUsers: number;
-}
+import React from "react";
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ channelName, onlineUsers }) => {
+export default function ChatHeader({ name = "Channel" }: { name?: string }) {
   return (
-    <div className="flex items-center justify-between p-4 bg-gray-800 text-white">
-      <h1 className="text-xl font-bold">{channelName}</h1>
-      <span className="text-sm">{onlineUsers} users online</span>
+    <div style={{ height: "48px", borderBottom: "1px solid #e1e2e4", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 600 }}>
+      # {name}
     </div>
   );
-};
-
-export default ChatHeader;
+}
