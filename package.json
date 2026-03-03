@@ -10,20 +10,24 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
+    "@prisma/client": "^5.22.0",
     "axios": "latest",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
     "livekit-client": "latest",
     "next": "latest",
     "next-auth": "latest",
-    "prisma": "latest",
+    "prisma": "^5.22.0",
     "react": "latest",
     "react-dom": "latest",
     "socket.io-client": "latest",
-    "tailwindcss": "latest",
     "uploadthing": "latest"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "25.3.3",
+    "@types/react": "19.2.14",
     "autoprefixer": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",

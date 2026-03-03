@@ -1,47 +1,127 @@
 model User {
   id        String   @id @default(cuid())
-  name      String?
+  username  String   @unique
   email     String   @unique
   password  String
-  channels  Channel[] @relation("UserChannels")
-  servers   Server[]  @relation("UserServers")
-  messages  Message[]
+  avatar    String?
+  status    String   @default("offline") // online, idle, dnd, offline
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  servers       ServerMember[]
+  messages      Message[]
+  channels      ChannelMember[]
   notifications Notification[]
+  friendsSent     Friendship[] @relation("FriendRequester")
+  friendsReceived Friendship[] @relation("FriendReceiver")
+  ownedServers  Server[]       @relation("ServerOwner")
+
+  @@map("users")
+}
+
+model Server {
+  id         String   @id @default(cuid())
+  name       String
+  icon       String?
+  inviteCode String   @unique @default(cuid())
+  ownerId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owner    User           @relation("ServerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  ServerMember[]
+  channels Channel[]
+
+  @@map("servers")
+}
+
+model ServerMember {
+  id       String   @id @default(cuid())
+  role     String   @default("member") // owner, admin, member
+  joinedAt DateTime @default(now())
+
+  userId   String
+  serverId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("server_members")
 }
 
 model Channel {
   id        String   @id @default(cuid())
   name      String
+  type      String   @default("text") // text, voice, video
   serverId  String
-  messages  Message[]
-  users     User[]   @relation("UserChannels")
-  server    Server   @relation(fields: [serverId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  server   Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages Message[]
+  members  ChannelMember[]
+
+  @@map("channels")
 }
 
-model Server {
+model ChannelMember {
   id        String   @id @default(cuid())
-  name      String
-  channels  Channel[]
-  users     User[]   @relation("UserServers")
+  userId    String
+  channelId String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@map("channel_members")
 }
 
 model Message {
   id        String   @id @default(cuid())
   content   String
-  senderId  String
-  channelId String
+  fileUrl   String?
+  fileName  String?
+  deleted   Boolean  @default(false)
+  edited    Boolean  @default(false)
   createdAt DateTime @default(now())
-  sender    User     @relation(fields: [senderId], references: [id])
-  channel   Channel  @relation(fields: [channelId], references: [id])
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  channelId String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  status    String   @default("pending") // pending, accepted, blocked
+  createdAt DateTime @default(now())
+
+  requesterId String
+  receiverId  String
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+  @@map("friendships")
 }
 
 model Notification {
   id        String   @id @default(cuid())
-  userId    String
-  message   String
-  isRead    Boolean  @default(false)
+  type      String   // message, friend_request, server_invite
+  content   String
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 datasource db {

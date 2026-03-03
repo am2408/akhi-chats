@@ -1,22 +1,22 @@
 import React from 'react';
-import { Inter } from 'next/font/google';
-import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import "./globals.css";
 
 export const metadata = {
-  title: 'Akhi Chats',
-  description: 'A chat application similar to Discord with features like chat, notifications, video calls, screen sharing, and file uploads.',
+  title: "Akhi Chats",
+  description: "Chat with your friends — Discord-like app",
+  icons: { icon: "/favicon.ico" },
 };
 
-const RootLayout = ({ children }) => {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
         {children}
       </body>
     </html>
   );
-};
-
-export default RootLayout;
+}
