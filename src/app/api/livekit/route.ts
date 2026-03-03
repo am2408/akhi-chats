@@ -32,6 +32,28 @@ export async function GET() {
   return NextResponse.json({ message: "LiveKit endpoint — configure later" });
 }
 
-export async function POST() {
-  return NextResponse.json({ message: "LiveKit endpoint — configure later" });
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { action, roomName, participantName } = body;
+
+  try {
+    switch (action) {
+      case "create": {
+        const result = await createRoom(roomName);
+        return NextResponse.json(result);
+      }
+      case "join": {
+        const result = await joinRoom(roomName, participantName);
+        return NextResponse.json(result);
+      }
+      case "leave": {
+        const result = await leaveRoom(roomName, participantName);
+        return NextResponse.json(result);
+      }
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+  } catch (error) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

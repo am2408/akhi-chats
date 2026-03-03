@@ -1,46 +1,42 @@
 import NextAuth from "next-auth";
-import Providers from "next-auth/providers";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { NextResponse } from "next/server";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
 
 const options = {
+  adapter: PrismaAdapter(prisma),
   providers: [
-    Providers.Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (!user || !user.password) return null;
+
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
+
+        return { id: user.id, name: user.name, email: user.email, image: user.image };
+      },
     }),
-    Providers.GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }),
-    // Add more providers as needed
   ],
-  callbacks: {
-    async session(session, user) {
-      session.user.id = user.id;
-      return session;
-    },
-    async jwt(token, user) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-  },
+  session: { strategy: "jwt" as const },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: '/auth/login',
-    signOut: '/auth/logout',
-    error: '/auth/error', // Error code passed in query string as ?error=
-    verifyRequest: '/auth/verify-request', // (used for check email message)
-    newUser: null // Will disable the new account creation screen
+    signIn: "/login",
   },
 };
 
-export default (req, res) => NextAuth(req, res, options);
-
-export async function GET() {
-  return NextResponse.json({ message: "Auth endpoint" });
-}
-
-export async function POST() {
-  return NextResponse.json({ message: "Auth endpoint" });
-}
+const handler = NextAuth(options);
+export { handler as GET, handler as POST };
