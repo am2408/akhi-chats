@@ -1,37 +1,70 @@
 "use client";
 
 import React, { useState } from "react";
-import Modal from "../ui/modal";
-import Input from "../ui/input";
 import Button from "../ui/button";
 
-const InviteModal = ({ isOpen, onClose }) => {
+interface InviteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const InviteModal = ({ isOpen, onClose }: InviteModalProps) => {
   const [email, setEmail] = useState("");
 
   const handleInvite = () => {
-    // Logic to send invite to the email
-    console.log(`Inviting ${email}`);
-    // Clear the input after sending the invite
+    if (!email.trim()) return;
+    // TODO: API call to send invite
     setEmail("");
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <h2 className="text-lg font-semibold">Invite a Friend</h2>
-      <Input
-        type="email"
-        placeholder="Enter friend's email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="mt-4"
-      />
-      <div className="mt-6 flex justify-end">
-        <Button onClick={handleInvite} disabled={!email}>
-          Send Invite
-        </Button>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "24px",
+          width: "100%",
+          maxWidth: "440px",
+        }}
+      >
+        <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>Invite People</h2>
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter email address"
+          style={{
+            width: "100%",
+            padding: "10px 14px",
+            borderRadius: "8px",
+            border: "1px solid #e1e2e4",
+            fontSize: "14px",
+            outline: "none",
+            background: "#f2f3f5",
+            marginBottom: "16px",
+          }}
+        />
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleInvite}>Send Invite</Button>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
