@@ -1,27 +1,37 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-const SocketContext = createContext(null);
+interface SocketContextType {
+  socket: WebSocket | null;
+  isConnected: boolean;
+}
 
-export const SocketProvider = ({ children }) => {
-    const [socket, setSocket] = useState(null);
+const SocketContext = createContext<SocketContextType>({
+  socket: null,
+  isConnected: false,
+});
 
-    useEffect(() => {
-        const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL);
-        setSocket(newSocket);
+export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-        return () => newSocket.close();
-    }, [setSocket]);
+  useEffect(() => {
+    // TODO: Connect to WebSocket server when ready
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, [socket]);
 
-    return (
-        <SocketContext.Provider value={socket}>
-            {children}
-        </SocketContext.Provider>
-    );
+  return (
+    <SocketContext.Provider value={{ socket, isConnected }}>
+      {children}
+    </SocketContext.Provider>
+  );
 };
 
-export const useSocket = () => {
-    return useContext(SocketContext);
-};
+export const useSocket = () => useContext(SocketContext);
+
+export default SocketProvider;
