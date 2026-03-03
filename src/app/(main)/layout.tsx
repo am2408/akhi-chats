@@ -20,6 +20,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       >
         <a
           href="/chat"
+          title="Home"
           style={{
             width: "48px",
             height: "48px",
@@ -38,7 +39,27 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </a>
         <div style={{ width: "32px", height: "2px", background: "#c9ccd1", borderRadius: "1px" }} />
         <a
+          href="/friends"
+          title="Friends"
+          style={{
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            background: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#5865f2",
+            fontWeight: "bold",
+            fontSize: "20px",
+            textDecoration: "none",
+          }}
+        >
+          👥
+        </a>
+        <a
           href="/servers"
+          title="Servers"
           style={{
             width: "48px",
             height: "48px",
@@ -51,7 +72,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             fontWeight: "bold",
             fontSize: "24px",
             textDecoration: "none",
-            transition: "border-radius 0.2s",
           }}
         >
           +

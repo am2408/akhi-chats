@@ -16,6 +16,11 @@ model User {
   friendsReceived Friendship[] @relation("FriendReceiver")
   ownedServers  Server[]       @relation("ServerOwner")
 
+  friends       Friendship[]    @relation("UserFriends")
+  friendOf      Friendship[]    @relation("FriendOf")
+  sentDMs       DirectMessage[] @relation("SentMessages")
+  receivedDMs   DirectMessage[] @relation("ReceivedMessages")
+
   @@map("users")
 }
 
@@ -98,17 +103,32 @@ model Message {
 
 model Friendship {
   id        String   @id @default(cuid())
-  status    String   @default("pending") // pending, accepted, blocked
+  userId    String
+  friendId  String
+  status    String   @default("pending") // "pending", "accepted", "blocked"
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  requesterId String
-  receiverId  String
+  user   User @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
 
-  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-
-  @@unique([requesterId, receiverId])
+  @@unique([userId, friendId])
   @@map("friendships")
+}
+
+model DirectMessage {
+  id        String   @id @default(cuid())
+  content   String
+  fileUrl   String?
+  senderId  String
+  receiverId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("direct_messages")
 }
 
 model Notification {
