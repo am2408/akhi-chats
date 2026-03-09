@@ -8,16 +8,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  servers       ServerMember[]
-  messages      Message[]
-  channels      ChannelMember[]
-  notifications Notification[]
-  ownedServers  Server[]       @relation("ServerOwner")
+  servers        ServerMember[]
+  messages       Message[]
+  channels       ChannelMember[]
+  notifications  Notification[]
+  ownedServers   Server[]        @relation("ServerOwner")
 
-  friends       Friendship[]    @relation("UserFriends")
-  friendOf      Friendship[]    @relation("FriendOf")
-  sentDMs       DirectMessage[] @relation("SentMessages")
-  receivedDMs   DirectMessage[] @relation("ReceivedMessages")
+  friendRequestsSent     Friendship[]    @relation("FriendRequester")
+  friendRequestsReceived Friendship[]    @relation("FriendReceiver")
+  sentDMs                DirectMessage[] @relation("SentMessages")
+  receivedDMs            DirectMessage[] @relation("ReceivedMessages")
 
   @@map("users")
 }
@@ -32,25 +32,10 @@ model Server {
   updatedAt  DateTime @updatedAt
 
   owner    User           @relation("ServerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members  ServerMember[]
   channels Channel[]
+  members  ServerMember[]
 
   @@map("servers")
-}
-
-model ServerMember {
-  id       String   @id @default(cuid())
-  role     String   @default("member") // owner, admin, member
-  joinedAt DateTime @default(now())
-
-  userId   String
-  serverId String
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, serverId])
-  @@map("server_members")
 }
 
 model Channel {
@@ -69,7 +54,7 @@ model Channel {
 }
 
 model ChannelMember {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
   channelId String
 
@@ -80,18 +65,27 @@ model ChannelMember {
   @@map("channel_members")
 }
 
+model ServerMember {
+  id       String @id @default(cuid())
+  role     String @default("member")
+  userId   String
+  serverId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("server_members")
+}
+
 model Message {
   id        String   @id @default(cuid())
   content   String
   fileUrl   String?
-  fileName  String?
-  deleted   Boolean  @default(false)
-  edited    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   userId    String
   channelId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -99,29 +93,41 @@ model Message {
   @@map("messages")
 }
 
-model Friendship {
+model Notification {
   id        String   @id @default(cuid())
+  type      String
+  content   String
+  read      Boolean  @default(false)
   userId    String
-  friendId  String
-  status    String   @default("pending") // "pending", "accepted", "blocked"
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  user   User @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
-  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, friendId])
+  @@map("notifications")
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
   @@map("friendships")
 }
 
 model DirectMessage {
-  id        String   @id @default(cuid())
-  content   String
-  fileUrl   String?
-  senderId  String
+  id         String   @id @default(cuid())
+  content    String
+  fileUrl    String?
+  senderId   String
   receiverId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
@@ -129,24 +135,12 @@ model DirectMessage {
   @@map("direct_messages")
 }
 
-model Notification {
-  id        String   @id @default(cuid())
-  type      String   // message, friend_request, server_invite
-  content   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
+generator client {
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }

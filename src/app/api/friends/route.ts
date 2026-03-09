@@ -15,26 +15,25 @@ export async function GET(request: Request) {
     const friendships = await prisma.friendship.findMany({
       where: {
         OR: [
-          { userId, status },
-          { friendId: userId, status },
+          { requesterId: userId, status },
+          { receiverId: userId, status },
         ],
       },
       include: {
-        user: { select: { id: true, username: true, avatar: true, status: true } },
-        friend: { select: { id: true, username: true, avatar: true, status: true } },
+        requester: { select: { id: true, username: true, avatar: true, status: true } },
+        receiver: { select: { id: true, username: true, avatar: true, status: true } },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    // Return the "other" user in each friendship
     const friends = friendships.map((f) => {
-      const other = f.userId === userId ? f.friend : f.user;
+      const other = f.requesterId === userId ? f.receiver : f.requester;
       return { ...other, friendshipId: f.id, friendshipStatus: f.status };
     });
 
     return NextResponse.json({ friends });
   } catch (error) {
-    console.error(error);
+    console.error("GET /api/friends error:", error);
     return NextResponse.json({ friends: [] });
   }
 }
@@ -42,7 +41,8 @@ export async function GET(request: Request) {
 // POST — send friend request
 export async function POST(req: Request) {
   try {
-    const { userId, friendId } = await req.json();
+    const body = await req.json();
+    const { userId, friendId } = body;
 
     if (!userId || !friendId) {
       return NextResponse.json({ error: "Missing userId or friendId" }, { status: 400 });
@@ -52,35 +52,62 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cannot add yourself" }, { status: 400 });
     }
 
-    // Check if friendship already exists
+    // Verify both users exist
+    const [user, friend] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      prisma.user.findUnique({ where: { id: friendId } }),
+    ]);
+
+    if (!user) {
+      return NextResponse.json({ error: "Your user account not found" }, { status: 404 });
+    }
+
+    if (!friend) {
+      return NextResponse.json({ error: "Friend not found" }, { status: 404 });
+    }
+
+    // Check if friendship already exists (in either direction)
     const existing = await prisma.friendship.findFirst({
       where: {
         OR: [
-          { userId, friendId },
-          { userId: friendId, friendId: userId },
+          { requesterId: userId, receiverId: friendId },
+          { requesterId: friendId, receiverId: userId },
         ],
       },
     });
 
     if (existing) {
-      return NextResponse.json({ error: "Friend request already exists", friendship: existing }, { status: 409 });
+      if (existing.status === "pending") {
+        return NextResponse.json({ error: "Friend request already pending" }, { status: 409 });
+      }
+      if (existing.status === "accepted") {
+        return NextResponse.json({ error: "Already friends" }, { status: 409 });
+      }
+      if (existing.status === "blocked") {
+        return NextResponse.json({ error: "This user is blocked" }, { status: 409 });
+      }
     }
 
     const friendship = await prisma.friendship.create({
-      data: { userId, friendId, status: "pending" },
+      data: {
+        requesterId: userId,
+        receiverId: friendId,
+        status: "pending",
+      },
       include: {
-        friend: { select: { id: true, username: true, avatar: true, status: true } },
+        receiver: { select: { id: true, username: true, avatar: true, status: true } },
       },
     });
 
     return NextResponse.json({ friendship }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to send friend request" }, { status: 500 });
+    console.error("POST /api/friends error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: "Failed to send friend request", details: message }, { status: 500 });
   }
 }
 
-// PATCH — accept/block friend request
+// PATCH — accept / block friend request
 export async function PATCH(req: Request) {
   try {
     const { friendshipId, status } = await req.json();
@@ -96,7 +123,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ friendship });
   } catch (error) {
-    console.error(error);
+    console.error("PATCH /api/friends error:", error);
     return NextResponse.json({ error: "Failed to update friendship" }, { status: 500 });
   }
 }
@@ -115,7 +142,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(error);
+    console.error("DELETE /api/friends error:", error);
     return NextResponse.json({ error: "Failed to remove friend" }, { status: 500 });
   }
 }
