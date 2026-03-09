@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const friendId = searchParams.get("friendId");
 
     if (!userId || !friendId) {
-      return NextResponse.json({ error: "Missing userId or friendId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing params" }, { status: 400 });
     }
 
     const messages = await prisma.directMessage.findMany({
@@ -23,11 +23,12 @@ export async function GET(request: Request) {
         sender: { select: { id: true, username: true, avatar: true } },
       },
       orderBy: { createdAt: "asc" },
+      take: 100,
     });
 
     return NextResponse.json({ messages });
   } catch (error) {
-    console.error(error);
+    console.error("GET /api/dm error:", error);
     return NextResponse.json({ messages: [] });
   }
 }
@@ -35,14 +36,18 @@ export async function GET(request: Request) {
 // POST — send a DM
 export async function POST(req: Request) {
   try {
-    const { senderId, receiverId, content, fileUrl } = await req.json();
+    const { senderId, receiverId, content } = await req.json();
 
-    if (!senderId || !receiverId || !content) {
+    if (!senderId || !receiverId || !content?.trim()) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
     const message = await prisma.directMessage.create({
-      data: { senderId, receiverId, content, fileUrl },
+      data: {
+        senderId,
+        receiverId,
+        content: content.trim(),
+      },
       include: {
         sender: { select: { id: true, username: true, avatar: true } },
       },
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("POST /api/dm error:", error);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

@@ -54,7 +54,14 @@ export default function Home() {
           Lightweight. Fast. No bloat.
         </p>
 
-        <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <button
             onClick={() => router.push("/login")}
             style={{
@@ -116,13 +123,13 @@ export default function Home() {
             flexWrap: "wrap",
           }}
         >
-          {[
+          {([
             { icon: "💬", label: "Chat" },
             { icon: "📹", label: "Video Call" },
             { icon: "🖥️", label: "Screen Share" },
             { icon: "📁", label: "File Upload" },
             { icon: "🔔", label: "Notifications" },
-          ].map((f) => (
+          ]).map((f) => (
             <div key={f.label} style={{ textAlign: "center", opacity: 0.85 }}>
               <div style={{ fontSize: "28px", marginBottom: "8px" }}>{f.icon}</div>
               <div style={{ fontSize: "13px", fontWeight: 500 }}>{f.label}</div>
