@@ -4,25 +4,32 @@ import { prisma } from "@/lib/db";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("q");
+    const query = searchParams.get("q") || "";
     const currentUserId = searchParams.get("userId");
 
-    if (!query || query.length < 2) {
+    if (!query && !currentUserId) {
+      return NextResponse.json({ users: [] });
+    }
+
+    // If query is empty but userId is provided, return all users (for friend lookup)
+    const whereClause: Record<string, unknown> = {};
+
+    if (currentUserId) {
+      whereClause.id = { not: currentUserId };
+    }
+
+    if (query.length >= 2) {
+      whereClause.OR = [
+        { username: { contains: query, mode: "insensitive" } },
+        { email: { contains: query, mode: "insensitive" } },
+      ];
+    } else if (!query) {
+      // No search query — return empty unless looking up specific users
       return NextResponse.json({ users: [] });
     }
 
     const users = await prisma.user.findMany({
-      where: {
-        AND: [
-          { id: { not: currentUserId || undefined } },
-          {
-            OR: [
-              { username: { contains: query, mode: "insensitive" } },
-              { email: { contains: query, mode: "insensitive" } },
-            ],
-          },
-        ],
-      },
+      where: whereClause,
       select: {
         id: true,
         username: true,

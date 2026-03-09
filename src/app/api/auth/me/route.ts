@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "fallback-secret-change-me";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret";
 
 export async function GET() {
   try {
@@ -18,14 +18,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        avatar: true,
-        status: true,
-        createdAt: true,
-      },
+      select: { id: true, username: true, email: true, avatar: true, status: true },
     });
 
     if (!user) {

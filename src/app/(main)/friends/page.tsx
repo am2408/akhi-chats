@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/use-auth";
 
 interface Friend {
   id: string;
@@ -18,10 +20,9 @@ interface SearchUser {
   status: string;
 }
 
-// TODO: Replace with actual auth — get current user ID from session
-const CURRENT_USER_ID = "";
-
 export default function FriendsPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [tab, setTab] = useState<"all" | "pending" | "add">("all");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingFriends, setPendingFriends] = useState<Friend[]>([]);
@@ -29,59 +30,82 @@ export default function FriendsPage() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("success");
 
-  // Fetch friends
+  // Redirect if not logged in
   useEffect(() => {
-    if (!CURRENT_USER_ID) return;
-    fetch(`/api/friends?userId=${CURRENT_USER_ID}&status=accepted`)
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
+
+  // Fetch accepted friends
+  const fetchFriends = useCallback(() => {
+    if (!user) return;
+    fetch(`/api/friends?userId=${user.id}&status=accepted`)
       .then((res) => res.json())
       .then((data) => setFriends(data.friends || []))
       .catch(console.error);
-  }, []);
+  }, [user]);
 
-  // Fetch pending requests
-  useEffect(() => {
-    if (!CURRENT_USER_ID) return;
-    fetch(`/api/friends?userId=${CURRENT_USER_ID}&status=pending`)
+  // Fetch pending friends
+  const fetchPending = useCallback(() => {
+    if (!user) return;
+    fetch(`/api/friends?userId=${user.id}&status=pending`)
       .then((res) => res.json())
       .then((data) => setPendingFriends(data.friends || []))
       .catch(console.error);
-  }, []);
+  }, [user]);
 
-  // Search users
-  const handleSearch = async () => {
-    if (searchQuery.length < 2) return;
-    setSearchLoading(true);
-    try {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}&userId=${CURRENT_USER_ID}`);
-      const data = await res.json();
-      setSearchResults(data.users || []);
-    } catch {
+  useEffect(() => {
+    fetchFriends();
+    fetchPending();
+  }, [fetchFriends, fetchPending]);
+
+  // Live search — triggers as you type (debounced)
+  useEffect(() => {
+    if (tab !== "add" || searchQuery.length < 2 || !user) {
       setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
+      return;
     }
+
+    const timer = setTimeout(() => {
+      setSearchLoading(true);
+      fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}&userId=${user.id}`)
+        .then((res) => res.json())
+        .then((data) => setSearchResults(data.users || []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, tab, user]);
+
+  const showMessage = (msg: string, type: "success" | "error" = "success") => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(""), 3000);
   };
 
   // Send friend request
   const addFriend = async (friendId: string) => {
+    if (!user) return;
     try {
       const res = await fetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: CURRENT_USER_ID, friendId }),
+        body: JSON.stringify({ userId: user.id, friendId }),
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage("Friend request sent!");
+        showMessage("Friend request sent!", "success");
         setSearchResults((prev) => prev.filter((u) => u.id !== friendId));
       } else {
-        setMessage(data.error || "Failed to send request");
+        showMessage(data.error || "Failed to send request", "error");
       }
     } catch {
-      setMessage("Something went wrong");
+      showMessage("Something went wrong", "error");
     }
-    setTimeout(() => setMessage(""), 3000);
   };
 
   // Accept friend request
@@ -92,26 +116,35 @@ export default function FriendsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ friendshipId, status: "accepted" }),
       });
-      setPendingFriends((prev) => prev.filter((f) => f.friendshipId !== friendshipId));
-      // Refresh friends list
-      const res = await fetch(`/api/friends?userId=${CURRENT_USER_ID}&status=accepted`);
-      const data = await res.json();
-      setFriends(data.friends || []);
+      showMessage("Friend request accepted!", "success");
+      fetchFriends();
+      fetchPending();
     } catch {
-      console.error("Failed to accept");
+      showMessage("Failed to accept", "error");
     }
   };
 
-  // Remove friend
+  // Remove / decline friend
   const removeFriend = async (friendshipId: string) => {
     try {
       await fetch(`/api/friends?friendshipId=${friendshipId}`, { method: "DELETE" });
       setFriends((prev) => prev.filter((f) => f.friendshipId !== friendshipId));
       setPendingFriends((prev) => prev.filter((f) => f.friendshipId !== friendshipId));
+      showMessage("Removed", "success");
     } catch {
-      console.error("Failed to remove");
+      showMessage("Failed to remove", "error");
     }
   };
+
+  if (authLoading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#5c5e66" }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: "8px 16px",
@@ -165,47 +198,25 @@ export default function FriendsPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Header */}
-      <div
-        style={{
-          height: "48px",
-          borderBottom: "1px solid #e1e2e4",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 16px",
-          gap: "8px",
-        }}
-      >
+      <div style={{ height: "48px", borderBottom: "1px solid #e1e2e4", display: "flex", alignItems: "center", padding: "0 16px", gap: "8px" }}>
         <span style={{ fontWeight: 700, marginRight: "16px" }}>👥 Friends</span>
-        <button style={tabStyle(tab === "all")} onClick={() => setTab("all")}>
-          All
-        </button>
+        <button style={tabStyle(tab === "all")} onClick={() => setTab("all")}>All</button>
         <button style={tabStyle(tab === "pending")} onClick={() => setTab("pending")}>
           Pending {pendingFriends.length > 0 && `(${pendingFriends.length})`}
         </button>
-        <button style={tabStyle(tab === "add")} onClick={() => setTab("add")}>
-          Add Friend
-        </button>
+        <button style={tabStyle(tab === "add")} onClick={() => setTab("add")}>Add Friend</button>
       </div>
 
-      {/* Toast message */}
+      {/* Toast */}
       {message && (
-        <div
-          style={{
-            padding: "10px 16px",
-            background: "#23a55a",
-            color: "#fff",
-            fontSize: "14px",
-            fontWeight: 600,
-            textAlign: "center",
-          }}
-        >
+        <div style={{ padding: "10px 16px", background: messageType === "success" ? "#23a55a" : "#da373c", color: "#fff", fontSize: "14px", fontWeight: 600, textAlign: "center" }}>
           {message}
         </div>
       )}
 
       {/* Content */}
       <div style={{ flex: 1, padding: "16px 24px", overflowY: "auto" }}>
-        {/* ============ ALL FRIENDS ============ */}
+        {/* ALL */}
         {tab === "all" && (
           <>
             <h3 style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#5c5e66", marginBottom: "12px" }}>
@@ -214,7 +225,7 @@ export default function FriendsPage() {
             {friends.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", color: "#5c5e66" }}>
                 <div style={{ fontSize: "48px", marginBottom: "12px" }}>👥</div>
-                <p>No friends yet. Add someone to get started!</p>
+                <p>No friends yet. Click &quot;Add Friend&quot; to find people!</p>
               </div>
             ) : (
               friends.map((friend) => (
@@ -235,16 +246,9 @@ export default function FriendsPage() {
                     </div>
                   </div>
                   <div>
-                    <a
-                      href={`/dm/${friend.id}`}
-                      style={{
-                        ...btnStyle("#5865f2"),
-                        textDecoration: "none",
-                        display: "inline-block",
-                      }}
-                    >
+                    <button style={btnStyle("#5865f2")} onClick={() => router.push(`/dm/${friend.id}`)}>
                       💬 Message
-                    </a>
+                    </button>
                     <button style={btnStyle("#da373c")} onClick={() => removeFriend(friend.friendshipId)}>
                       Remove
                     </button>
@@ -255,7 +259,7 @@ export default function FriendsPage() {
           </>
         )}
 
-        {/* ============ PENDING ============ */}
+        {/* PENDING */}
         {tab === "pending" && (
           <>
             <h3 style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#5c5e66", marginBottom: "12px" }}>
@@ -269,21 +273,15 @@ export default function FriendsPage() {
               pendingFriends.map((friend) => (
                 <div key={friend.friendshipId} style={cardStyle}>
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={avatarStyle}>
-                      {friend.username.charAt(0).toUpperCase()}
-                    </div>
+                    <div style={avatarStyle}>{friend.username.charAt(0).toUpperCase()}</div>
                     <div>
                       <div style={{ fontWeight: 600 }}>{friend.username}</div>
                       <div style={{ fontSize: "12px", color: "#5c5e66" }}>Incoming friend request</div>
                     </div>
                   </div>
                   <div>
-                    <button style={btnStyle("#23a55a")} onClick={() => acceptFriend(friend.friendshipId)}>
-                      ✓ Accept
-                    </button>
-                    <button style={btnStyle("#da373c")} onClick={() => removeFriend(friend.friendshipId)}>
-                      ✗ Decline
-                    </button>
+                    <button style={btnStyle("#23a55a")} onClick={() => acceptFriend(friend.friendshipId)}>✓ Accept</button>
+                    <button style={btnStyle("#da373c")} onClick={() => removeFriend(friend.friendshipId)}>✗ Decline</button>
                   </div>
                 </div>
               ))
@@ -291,47 +289,31 @@ export default function FriendsPage() {
           </>
         )}
 
-        {/* ============ ADD FRIEND ============ */}
+        {/* ADD FRIEND */}
         {tab === "add" && (
           <>
             <h3 style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#5c5e66", marginBottom: "12px" }}>
               Add Friend
             </h3>
             <p style={{ fontSize: "14px", color: "#4e5058", marginBottom: "16px" }}>
-              Search by username or email to find friends.
+              Start typing a username or email to search.
             </p>
-            <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Enter a username or email..."
-                style={{
-                  flex: 1,
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid #e1e2e4",
-                  fontSize: "14px",
-                  outline: "none",
-                  background: "#ebedef",
-                }}
-              />
-              <button
-                onClick={handleSearch}
-                style={{
-                  padding: "12px 24px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: "#5865f2",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Search
-              </button>
-            </div>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by username or email..."
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                border: "1px solid #e1e2e4",
+                fontSize: "14px",
+                outline: "none",
+                background: "#ebedef",
+                marginBottom: "24px",
+                boxSizing: "border-box",
+              }}
+            />
 
             {searchLoading && <p style={{ color: "#5c5e66" }}>Searching...</p>}
 
@@ -342,26 +324,22 @@ export default function FriendsPage() {
               </div>
             )}
 
-            {searchResults.map((user) => (
-              <div key={user.id} style={cardStyle}>
+            {searchResults.map((u) => (
+              <div key={u.id} style={cardStyle}>
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <div style={avatarStyle}>
-                    {user.avatar ? (
-                      <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%" }} />
+                    {u.avatar ? (
+                      <img src={u.avatar} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%" }} />
                     ) : (
-                      user.username.charAt(0).toUpperCase()
+                      u.username.charAt(0).toUpperCase()
                     )}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{user.username}</div>
-                    <div style={{ fontSize: "12px", color: user.status === "online" ? "#23a55a" : "#80848e" }}>
-                      {user.status}
-                    </div>
+                    <div style={{ fontWeight: 600 }}>{u.username}</div>
+                    <div style={{ fontSize: "12px", color: u.status === "online" ? "#23a55a" : "#80848e" }}>{u.status}</div>
                   </div>
                 </div>
-                <button style={btnStyle("#23a55a")} onClick={() => addFriend(user.id)}>
-                  + Add Friend
-                </button>
+                <button style={btnStyle("#23a55a")} onClick={() => addFriend(u.id)}>+ Add Friend</button>
               </div>
             ))}
           </>
