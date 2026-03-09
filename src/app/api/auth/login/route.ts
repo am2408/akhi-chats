@@ -1,47 +1,42 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret";
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+      return NextResponse.json({ error: "Missing email or password" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) {
+    if (!user || user.password !== password) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-    }
-
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+    // Update status to online
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { status: "online" },
+    });
 
     const response = NextResponse.json({
       user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar },
     });
 
-    response.cookies.set("token", token, {
+    // Set session cookie (simple: store user ID)
+    response.cookies.set("session", user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     });
 
     return response;
   } catch (error) {
-    console.error(error);
+    console.error("POST /api/auth/login error:", error);
     return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

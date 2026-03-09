@@ -2,28 +2,33 @@
 
 import { useEffect, useState } from "react";
 
-interface AuthUser {
+interface User {
   id: string;
   username: string;
   email: string;
   avatar: string | null;
+  status: string;
 }
 
 export default function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/auth/me")
-      .then((res) => {
-        if (!res.ok) throw new Error("Not authenticated");
-        return res.json();
+      .then((r) => {
+        if (!r.ok) throw new Error("Not authenticated");
+        return r.json();
       })
       .then((data) => {
-        if (data.user) setUser(data.user);
+        setUser(data.user || null);
       })
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   return { user, loading };
