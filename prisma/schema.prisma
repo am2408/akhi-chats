@@ -12,8 +12,8 @@ model User {
   ownedServers   Server[]        @relation("ServerOwner")
   sentDMs        DirectMessage[] @relation("DMSender")
   receivedDMs    DirectMessage[] @relation("DMReceiver")
-  sentFriendships     Friendship[] @relation("FriendshipUser")
-  receivedFriendships Friendship[] @relation("FriendshipFriend")
+  sentFriendships     Friendship[] @relation("UserFriendships")
+  receivedFriendships Friendship[] @relation("FriendOfUser")
   notifications  Notification[]
   callsMade      Call[]          @relation("CallCaller")
   callsReceived  Call[]          @relation("CallReceiver")
