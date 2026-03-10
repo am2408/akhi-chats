@@ -27,16 +27,14 @@ export async function GET(request: Request) {
         }
       };
 
-      // Send heartbeat every 15s to keep connection alive
       const heartbeat = setInterval(() => {
         send("heartbeat", { time: Date.now() });
       }, 15000);
 
-      // Poll DB for changes every 2 seconds and push events
       let lastNotifCheck = new Date();
-      let lastFriendCheck = new Date();
       let lastDMCheck = new Date();
       let lastFriendStatuses: Record<string, string> = {};
+      let lastFriendshipIds: string[] = [];
 
       const poll = async () => {
         if (closed) return;
@@ -58,11 +56,10 @@ export async function GET(request: Request) {
             }
           }
 
-          // 2. Check friendship changes
-          const friendships = await prisma.friendship.findMany({
+          // 2. Check friendship changes (compare IDs instead of createdAt)
+          const allFriendships = await prisma.friendship.findMany({
             where: {
               OR: [{ userId }, { friendId: userId }],
-              createdAt: { gt: lastFriendCheck },
             },
             include: {
               user: { select: { id: true, username: true, avatar: true, status: true } },
@@ -70,22 +67,16 @@ export async function GET(request: Request) {
             },
           });
 
-          if (friendships.length > 0) {
-            lastFriendCheck = new Date();
-            send("friends_update", { friendships });
+          const currentFriendshipIds = allFriendships.map((f) => `${f.id}-${f.status}`).sort();
+          const prevIds = lastFriendshipIds.sort();
+
+          if (JSON.stringify(currentFriendshipIds) !== JSON.stringify(prevIds)) {
+            lastFriendshipIds = currentFriendshipIds;
+            send("friends_update", { friendships: allFriendships });
           }
 
           // 3. Check friend online status changes
-          const acceptedFriendships = await prisma.friendship.findMany({
-            where: {
-              status: "accepted",
-              OR: [{ userId }, { friendId: userId }],
-            },
-            include: {
-              user: { select: { id: true, status: true } },
-              friend: { select: { id: true, status: true } },
-            },
-          });
+          const acceptedFriendships = allFriendships.filter((f) => f.status === "accepted");
 
           const currentStatuses: Record<string, string> = {};
           for (const f of acceptedFriendships) {
@@ -93,7 +84,6 @@ export async function GET(request: Request) {
             currentStatuses[other.id] = other.status;
           }
 
-          // Compare with last known statuses
           let statusChanged = false;
           for (const [id, status] of Object.entries(currentStatuses)) {
             if (lastFriendStatuses[id] !== status) {
@@ -133,13 +123,10 @@ export async function GET(request: Request) {
         }
       };
 
-      // Initial poll
       await poll();
 
-      // Poll every 2 seconds
       const pollInterval = setInterval(poll, 2000);
 
-      // Cleanup on close
       request.signal.addEventListener("abort", () => {
         closed = true;
         clearInterval(heartbeat);
