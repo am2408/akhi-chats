@@ -4,68 +4,52 @@ model User {
   email     String   @unique
   password  String
   avatar    String?
-  status    String   @default("offline") // online, idle, dnd, offline
+  status    String   @default("offline")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  sentFriendships     Friendship[]    @relation("FriendshipUser")
-  receivedFriendships Friendship[]    @relation("FriendshipFriend")
-  sentMessages        DirectMessage[] @relation("DMSender")
-  receivedMessages    DirectMessage[] @relation("DMReceiver")
-  messages            Message[]
-  serverMembers       ServerMember[]
-  channelMembers      ChannelMember[]
-  notifications       Notification[]
+  messages       Message[]
+  servers        ServerMember[]
+  ownedServers   Server[]        @relation("ServerOwner")
+  sentDMs        DirectMessage[] @relation("DMSender")
+  receivedDMs    DirectMessage[] @relation("DMReceiver")
+  friendships    Friendship[]    @relation("UserFriendships")
+  friendOf       Friendship[]    @relation("FriendOfUser")
+  notifications  Notification[]
 }
 
 model Server {
-  id        String   @id @default(cuid())
-  name      String
-  icon      String?
-  ownerId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  icon       String?
+  inviteCode String   @unique @default(cuid())
+  ownerId    String
+  createdAt  DateTime @default(now())
 
+  owner    User           @relation("ServerOwner", fields: [ownerId], references: [id])
   channels Channel[]
   members  ServerMember[]
 }
 
-model Channel {
-  id        String   @id @default(cuid())
-  name      String
-  type      String   @default("text") // text, voice, video
-  serverId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  server  Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  messages Message[]
-  members  ChannelMember[]
-}
-
-model ChannelMember {
-  id        String   @id @default(cuid())
-  userId    String
-  channelId String
-  createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, channelId])
-}
-
 model ServerMember {
-  id        String   @id @default(cuid())
-  userId    String
-  serverId  String
-  role      String   @default("member")
-  createdAt DateTime @default(now())
+  id       String @id @default(cuid())
+  userId   String
+  serverId String
+  role     String @default("member")
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([userId, serverId])
+}
+
+model Channel {
+  id       String @id @default(cuid())
+  name     String
+  type     String @default("text")
+  serverId String
+
+  server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages Message[]
 }
 
 model Message {
@@ -75,10 +59,32 @@ model Message {
   userId    String
   channelId String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+}
+
+model DirectMessage {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("DMSender", fields: [senderId], references: [id])
+  receiver User @relation("DMReceiver", fields: [receiverId], references: [id])
+}
+
+model Friendship {
+  id       String @id @default(cuid())
+  userId   String
+  friendId String
+  status   String @default("pending")
+
+  user   User @relation("UserFriendships", fields: [userId], references: [id])
+  friend User @relation("FriendOfUser", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
 }
 
 model Notification {
@@ -91,41 +97,16 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Friendship {
-  id        String   @id @default(cuid())
-  userId    String
-  friendId  String
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User @relation("FriendshipUser", fields: [userId], references: [id], onDelete: Cascade)
-  friend User @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, friendId])
-}
-
-model DirectMessage {
-  id         String   @id @default(cuid())
-  content    String
-  fileUrl    String?
-  senderId   String
-  receiverId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  sender   User @relation("DMSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver User @relation("DMReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
