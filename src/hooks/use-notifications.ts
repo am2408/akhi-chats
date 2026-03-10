@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import useEvents from "./use-events";
 
 interface Notification {
   id: string;
@@ -28,11 +29,29 @@ export default function useNotifications(userId: string | undefined) {
       .catch(console.error);
   }, [userId]);
 
+  // Initial fetch
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000);
-    return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Listen for real-time notifications via SSE
+  useEvents({
+    userId,
+    onNotification: (data) => {
+      const notif = data as Notification;
+      setNotifications((prev) => {
+        // Don't add duplicates
+        if (prev.some((n) => n.id === notif.id)) return prev;
+        return [notif, ...prev];
+      });
+      setUnreadCount((c) => c + 1);
+
+      // Browser notification if permission granted
+      if (typeof window !== "undefined" && Notification.permission === "granted") {
+        new Notification(notif.title, { body: notif.body });
+      }
+    },
+  });
 
   const markAsRead = async (notificationId: string) => {
     await fetch("/api/notifications", {

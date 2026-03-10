@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import useAuth from "@/hooks/use-auth";
+import useEvents from "@/hooks/use-events";
 
 interface DM {
   id: string;
   content: string;
-  fileUrl: string | null;
+  fileUrl?: string | null;
   senderId: string;
   createdAt: string;
   sender: { id: string; username: string; avatar: string | null };
@@ -27,7 +28,6 @@ export default function DMPage() {
   const [messages, setMessages] = useState<DM[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [friend, setFriend] = useState<FriendInfo | null>(null);
-  const [showEmoji, setShowEmoji] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,7 +40,7 @@ export default function DMPage() {
       .catch(() => {});
   }, [friendId]);
 
-  // Fetch messages with polling
+  // Fetch messages
   const fetchMessages = useCallback(() => {
     if (!friendId || !user) return;
     fetch(`/api/dm?userId=${user.id}&friendId=${friendId}`)
@@ -51,9 +51,28 @@ export default function DMPage() {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
   }, [fetchMessages]);
+
+  // SSE: live messages + status
+  useEvents({
+    userId: user?.id,
+    onNewDM: (data) => {
+      const dm = data as DM & { senderId: string };
+      // Only add if it's from the friend we're chatting with
+      if (dm.senderId === friendId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === dm.id)) return prev;
+          return [...prev, dm];
+        });
+      }
+    },
+    onStatusUpdate: (data) => {
+      const statuses = data as Record<string, string>;
+      if (friend && statuses[friend.id] !== undefined) {
+        setFriend((prev) => prev ? { ...prev, status: statuses[friend.id] } : null);
+      }
+    },
+  });
 
   // Auto-scroll
   useEffect(() => {
@@ -70,11 +89,9 @@ export default function DMPage() {
     const content = newMessage;
     setNewMessage("");
 
-    // Optimistic update
     const optimisticMsg: DM = {
       id: `temp-${Date.now()}`,
       content,
-      fileUrl: null,
       senderId: user.id,
       createdAt: new Date().toISOString(),
       sender: { id: user.id, username: user.username, avatar: user.avatar || null },
@@ -89,26 +106,15 @@ export default function DMPage() {
       });
       const data = await res.json();
       if (data.message) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
-        );
+        setMessages((prev) => prev.map((m) => (m.id === optimisticMsg.id ? data.message : m)));
       }
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
     }
   };
 
-  const addEmoji = (emoji: string) => {
-    setNewMessage((prev) => prev + emoji);
-    setShowEmoji(false);
-    inputRef.current?.focus();
-  };
-
-  const emojis = ["😀", "😂", "❤️", "🔥", "👍", "👎", "🎉", "😢", "😡", "🤔", "😮", "💀", "👀", "✅", "🙏", "🫡", "💯", "😭", "🥺", "😤"];
-
   if (!user) return null;
 
-  // Show loading if friend not loaded yet
   if (!friend) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--dc-text-muted)" }}>
@@ -117,7 +123,7 @@ export default function DMPage() {
     );
   }
 
-  const statusColor = friend.status === "online" ? "var(--dc-status-online)" : friend.status === "idle" ? "var(--dc-status-idle)" : friend.status === "dnd" ? "var(--dc-status-dnd)" : "var(--dc-status-offline)";
+  const statusColor = friend.status === "online" ? "#23a55a" : friend.status === "idle" ? "#f0b232" : friend.status === "dnd" ? "#f23f43" : "#80848e";
 
   // Group messages by date
   const groupedMessages: { date: string; msgs: DM[] }[] = [];
@@ -152,7 +158,7 @@ export default function DMPage() {
         <span style={{ color: "var(--dc-text-muted)", fontSize: 20 }}>@</span>
         <div style={{
           width: 24, height: 24, borderRadius: "50%",
-          background: friend.avatar ? `url(${friend.avatar}) center/cover` : "var(--dc-brand)",
+          background: friend.avatar ? `url(${friend.avatar}) center/cover` : "#5865f2",
           display: "flex", alignItems: "center", justifyContent: "center",
           color: "#fff", fontSize: 10, fontWeight: 600,
         }}>
@@ -164,11 +170,10 @@ export default function DMPage() {
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: 8 }}>
-        {/* Welcome */}
         <div style={{ padding: "24px 16px 8px" }}>
           <div style={{
             width: 80, height: 80, borderRadius: "50%",
-            background: friend.avatar ? `url(${friend.avatar}) center/cover` : "var(--dc-brand)",
+            background: friend.avatar ? `url(${friend.avatar}) center/cover` : "#5865f2",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 36, fontWeight: 600, marginBottom: 12,
           }}>
@@ -176,24 +181,18 @@ export default function DMPage() {
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>{friend.username}</h1>
           <p style={{ color: "var(--dc-text-muted)", fontSize: 14, marginBottom: 16 }}>
-            This is the beginning of your direct message history with{" "}
-            <strong style={{ color: "var(--dc-text-primary)" }}>{friend.username}</strong>.
+            This is the beginning of your direct message history with <strong style={{ color: "var(--dc-text-primary)" }}>{friend.username}</strong>.
           </p>
           <div style={{ height: 1, background: "var(--dc-divider)" }} />
         </div>
 
-        {/* Message groups */}
         {groupedMessages.map((group) => (
           <div key={group.date}>
-            {/* Date divider */}
             <div style={{ display: "flex", alignItems: "center", padding: "16px 16px 4px", gap: 8 }}>
               <div style={{ flex: 1, height: 1, background: "var(--dc-divider)" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--dc-text-muted)", whiteSpace: "nowrap" }}>
-                {group.date}
-              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--dc-text-muted)", whiteSpace: "nowrap" }}>{group.date}</span>
               <div style={{ flex: 1, height: 1, background: "var(--dc-divider)" }} />
             </div>
-
             {group.msgs.map((msg, idx) => {
               const showHead = shouldShowHeader(group.msgs, idx);
               const isMe = msg.senderId === user.id;
@@ -201,31 +200,23 @@ export default function DMPage() {
               const senderAvatar = isMe ? (user.avatar || null) : friend.avatar;
 
               return (
-                <div
-                  key={msg.id}
-                  style={{
-                    padding: showHead ? "4px 48px 1px 72px" : "1px 48px 1px 72px",
-                    marginTop: showHead ? 16 : 0,
-                    position: "relative",
-                  }}
-                >
+                <div key={msg.id} style={{
+                  padding: showHead ? "4px 48px 1px 72px" : "1px 48px 1px 72px",
+                  marginTop: showHead ? 16 : 0, position: "relative",
+                }}>
                   {showHead && (
                     <div>
-                      {/* Avatar */}
                       <div style={{
                         position: "absolute", left: 16, top: 4,
                         width: 40, height: 40, borderRadius: "50%",
-                        background: senderAvatar ? `url(${senderAvatar}) center/cover` : "var(--dc-brand)",
+                        background: senderAvatar ? `url(${senderAvatar}) center/cover` : "#5865f2",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         color: "#fff", fontWeight: 600, fontSize: 16,
                       }}>
                         {!senderAvatar && senderName[0].toUpperCase()}
                       </div>
-                      {/* Name + time */}
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-                        <span style={{ fontWeight: 600, fontSize: 15, color: isMe ? "var(--dc-brand)" : "#f38ba8" }}>
-                          {senderName}
-                        </span>
+                        <span style={{ fontWeight: 600, fontSize: 15, color: isMe ? "#5865f2" : "#f38ba8" }}>{senderName}</span>
                         <span style={{ fontSize: 11, color: "var(--dc-text-muted)" }}>
                           {new Date(msg.createdAt).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })}
                           {" "}
@@ -249,37 +240,11 @@ export default function DMPage() {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "0 16px 24px", position: "relative" }}>
-        {/* Emoji picker */}
-        {showEmoji && (
-          <div>
-            <div style={{ position: "fixed", inset: 0, zIndex: 998 }} onClick={() => setShowEmoji(false)} />
-            <div style={{
-              position: "absolute", bottom: 72, right: 16,
-              background: "var(--dc-bg-floating)", borderRadius: 8, padding: 12,
-              zIndex: 999, boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, width: 220,
-            }}>
-              {emojis.map((e) => (
-                <button key={e} onClick={() => addEmoji(e)} style={{
-                  width: 36, height: 36, borderRadius: 6, background: "transparent",
-                  border: "none", cursor: "pointer", fontSize: 20,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>{e}</button>
-              ))}
-            </div>
-          </div>
-        )}
-
+      <div style={{ padding: "0 16px 24px" }}>
         <div style={{
           display: "flex", alignItems: "center",
           background: "var(--dc-bg-active)", borderRadius: 8, padding: "0 16px",
         }}>
-          <button style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: "var(--dc-text-muted)", fontSize: 22, padding: "8px 8px 8px 0",
-          }}>➕</button>
-
           <input
             ref={inputRef}
             value={newMessage}
@@ -291,11 +256,6 @@ export default function DMPage() {
               border: "none", outline: "none", fontSize: 15, color: "var(--dc-text-primary)",
             }}
           />
-
-          <button onClick={() => setShowEmoji(!showEmoji)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: "var(--dc-text-muted)", fontSize: 22, padding: 8,
-          }}>😀</button>
         </div>
       </div>
     </div>
