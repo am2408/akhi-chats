@@ -12,9 +12,11 @@ model User {
   ownedServers   Server[]        @relation("ServerOwner")
   sentDMs        DirectMessage[] @relation("DMSender")
   receivedDMs    DirectMessage[] @relation("DMReceiver")
-  friendships    Friendship[]    @relation("UserFriendships")
-  friendOf       Friendship[]    @relation("FriendOfUser")
+  sentFriendships     Friendship[] @relation("FriendshipUser")
+  receivedFriendships Friendship[] @relation("FriendshipFriend")
   notifications  Notification[]
+  callsMade      Call[]          @relation("CallCaller")
+  callsReceived  Call[]          @relation("CallReceiver")
 }
 
 model Server {
@@ -97,7 +99,21 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model Call {
+  id         String   @id @default(cuid())
+  callerId   String
+  receiverId String
+  status     String   @default("ringing")
+  type       String   @default("video")
+  roomId     String   @unique
+  createdAt  DateTime @default(now())
+  endedAt    DateTime?
+
+  caller   User @relation("CallCaller", fields: [callerId], references: [id], onDelete: Restrict)
+  receiver User @relation("CallReceiver", fields: [receiverId], references: [id], onDelete: Restrict)
 }
 
 generator client {

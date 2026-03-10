@@ -22,6 +22,7 @@
     "livekit-server-sdk": "^2.15.0",
     "next": "latest",
     "next-auth": "latest",
+    "peerjs": "^1.5.5",
     "pg": "^8.20.0",
     "prisma": "^5.22.0",
     "react": "latest",

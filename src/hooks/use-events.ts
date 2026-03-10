@@ -10,6 +10,8 @@ interface UseEventsOptions {
   onFriendsUpdate?: EventHandler;
   onStatusUpdate?: EventHandler;
   onNewDM?: EventHandler;
+  onIncomingCall?: EventHandler;
+  onCallEnded?: EventHandler;
 }
 
 export default function useEvents({
@@ -18,17 +20,31 @@ export default function useEvents({
   onFriendsUpdate,
   onStatusUpdate,
   onNewDM,
+  onIncomingCall,
+  onCallEnded,
 }: UseEventsOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
-  const handlersRef = useRef({ onNotification, onFriendsUpdate, onStatusUpdate, onNewDM });
+  const handlersRef = useRef({
+    onNotification,
+    onFriendsUpdate,
+    onStatusUpdate,
+    onNewDM,
+    onIncomingCall,
+    onCallEnded,
+  });
 
-  // Keep handlers ref up to date
-  handlersRef.current = { onNotification, onFriendsUpdate, onStatusUpdate, onNewDM };
+  handlersRef.current = {
+    onNotification,
+    onFriendsUpdate,
+    onStatusUpdate,
+    onNewDM,
+    onIncomingCall,
+    onCallEnded,
+  };
 
   const connect = useCallback(() => {
     if (!userId) return;
 
-    // Close existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
@@ -37,36 +53,31 @@ export default function useEvents({
     eventSourceRef.current = es;
 
     es.addEventListener("notification", (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handlersRef.current.onNotification?.(data);
-      } catch {}
+      try { handlersRef.current.onNotification?.(JSON.parse(e.data)); } catch {}
     });
 
     es.addEventListener("friends_update", (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handlersRef.current.onFriendsUpdate?.(data);
-      } catch {}
+      try { handlersRef.current.onFriendsUpdate?.(JSON.parse(e.data)); } catch {}
     });
 
     es.addEventListener("status_update", (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handlersRef.current.onStatusUpdate?.(data);
-      } catch {}
+      try { handlersRef.current.onStatusUpdate?.(JSON.parse(e.data)); } catch {}
     });
 
     es.addEventListener("new_dm", (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        handlersRef.current.onNewDM?.(data);
-      } catch {}
+      try { handlersRef.current.onNewDM?.(JSON.parse(e.data)); } catch {}
+    });
+
+    es.addEventListener("incoming_call", (e) => {
+      try { handlersRef.current.onIncomingCall?.(JSON.parse(e.data)); } catch {}
+    });
+
+    es.addEventListener("call_ended", (e) => {
+      try { handlersRef.current.onCallEnded?.(JSON.parse(e.data)); } catch {}
     });
 
     es.onerror = () => {
       es.close();
-      // Reconnect after 3 seconds
       setTimeout(() => {
         if (!eventSourceRef.current || eventSourceRef.current.readyState === EventSource.CLOSED) {
           connect();

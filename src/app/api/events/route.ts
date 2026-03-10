@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       let lastDMCheck = new Date();
       let lastFriendStatuses: Record<string, string> = {};
       let lastFriendshipIds: string[] = [];
+      let lastCallId: string | null = null;
 
       const poll = async () => {
         if (closed) return;
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
             }
           }
 
-          // 2. Check friendship changes (compare IDs instead of createdAt)
+          // 2. Check friendship changes
           const allFriendships = await prisma.friendship.findMany({
             where: {
               OR: [{ userId }, { friendId: userId }],
@@ -118,13 +119,40 @@ export async function GET(request: Request) {
               send("new_dm", dm);
             }
           }
+
+          // 5. Check incoming calls
+          const incomingCall = await prisma.call.findFirst({
+            where: {
+              receiverId: userId,
+              status: "ringing",
+            },
+            include: {
+              caller: { select: { id: true, username: true, avatar: true } },
+            },
+            orderBy: { createdAt: "desc" },
+          });
+
+          if (incomingCall && incomingCall.id !== lastCallId) {
+            lastCallId = incomingCall.id;
+            send("incoming_call", {
+              callId: incomingCall.id,
+              roomId: incomingCall.roomId,
+              type: incomingCall.type,
+              caller: incomingCall.caller,
+            });
+          }
+
+          if (!incomingCall && lastCallId) {
+            lastCallId = null;
+            send("call_ended", {});
+          }
+
         } catch (error) {
           console.error("SSE poll error:", error);
         }
       };
 
       await poll();
-
       const pollInterval = setInterval(poll, 2000);
 
       request.signal.addEventListener("abort", () => {
