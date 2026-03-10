@@ -25,7 +25,15 @@ export async function GET(request: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { notificationId } = await req.json();
+    const { notificationId, userId, markAll } = await req.json();
+
+    if (markAll && userId) {
+      await prisma.notification.updateMany({
+        where: { userId, read: false },
+        data: { read: true },
+      });
+      return NextResponse.json({ success: true });
+    }
 
     if (!notificationId) {
       return NextResponse.json({ error: "Missing notificationId" }, { status: 400 });
@@ -39,6 +47,24 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("PATCH /api/notifications error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const notificationId = searchParams.get("notificationId");
+
+    if (!notificationId) {
+      return NextResponse.json({ error: "Missing notificationId" }, { status: 400 });
+    }
+
+    await prisma.notification.delete({ where: { id: notificationId } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/notifications error:", error);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

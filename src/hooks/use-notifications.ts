@@ -1,51 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface Notification {
   id: string;
   type: string;
-  content: string;
+  title: string;
+  body: string;
   read: boolean;
+  data: string | null;
+  createdAt: string;
 }
 
-const useNotifications = () => {
+export default function useNotifications(userId: string | undefined) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [newNotification, setNewNotification] = useState<Notification | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    fetch("/api/notifications")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.notifications) setNotifications(data.notifications);
+  const fetchNotifications = useCallback(() => {
+    if (!userId) return;
+    fetch(`/api/notifications?userId=${userId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const notifs = d.notifications || [];
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter((n: Notification) => !n.read).length);
       })
       .catch(console.error);
+  }, [userId]);
 
-    try {
-      const eventSource = new EventSource("/api/notifications/stream");
-      eventSource.onmessage = (event) => {
-        try {
-          const notification: Notification = JSON.parse(event.data);
-          setNewNotification(notification);
-          setNotifications((prev) => [...prev, notification]);
-        } catch {
-          // ignore parse errors
-        }
-      };
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
-      return () => {
-        eventSource.close();
-      };
-    } catch {
-      // SSE not available
-    }
-  }, []);
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const markAsRead = async (notificationId: string) => {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationId }),
+    });
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+    );
+    setUnreadCount((c) => Math.max(0, c - 1));
   };
 
-  return { notifications, newNotification, markAsRead };
-};
+  const markAllAsRead = async () => {
+    if (!userId) return;
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, markAll: true }),
+    });
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
 
-export default useNotifications;
+  return { notifications, unreadCount, markAsRead, markAllAsRead, refetch: fetchNotifications };
+}
