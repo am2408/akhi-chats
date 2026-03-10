@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,14 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Compare with bcrypt hash
+    const isValid = await bcrypt.compare(password, user.password);
+
+    if (!isValid) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
@@ -25,7 +33,6 @@ export async function POST(req: Request) {
       user: { id: user.id, username: user.username, email: user.email, avatar: user.avatar },
     });
 
-    // Set session cookie (simple: store user ID)
     response.cookies.set("session", user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
